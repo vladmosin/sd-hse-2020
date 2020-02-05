@@ -1,7 +1,9 @@
 package com.sd.hw
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
+import java.io.File
 
 internal class EnvironmentTest {
     private val environment = Environment()
@@ -28,7 +30,7 @@ internal class EnvironmentTest {
     fun oneCommandExecuteTest() {
         val result = environment.execute("echo 1")
         assertEquals(false, result.isInterrupted)
-        assertEquals("1", result.textResult)
+        assertEquals("1\n", result.textResult)
     }
 
     @Test
@@ -49,6 +51,21 @@ internal class EnvironmentTest {
     fun commandSequenceExecuteTest() {
         val result = environment.execute("echo a a a a | wc")
         assertEquals(false, result.isInterrupted)
-        assertEquals("1 4 8", result.textResult)
+        assertEquals("2 4 8", result.textResult)
+    }
+
+    @Test
+    fun simpleResolveFileTest() {
+        val file = File("kek")
+        file.createNewFile()
+        file.writeText("a\nb")
+        file.deleteOnExit()
+
+        assertEquals("a\nb", environment.resolveFile("kek"))
+    }
+
+    @Test
+    fun nonexistentFileResolveFileTest() {
+        assertNull(environment.resolveFile("kek"))
     }
 }

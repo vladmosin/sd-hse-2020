@@ -61,6 +61,9 @@ class Environment {
      */
     fun resolveFile(filename: String): String? {
         val file = File(filename)
+        if (!file.exists()) {
+            return null
+        }
         return file.readText()
     }
 
