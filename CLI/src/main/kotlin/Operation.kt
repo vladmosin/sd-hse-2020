@@ -31,12 +31,10 @@ class WC(environment: Environment) : Operation(environment) {
      * Returns number of lines, words and bytes.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        val filename = (if (args.isNotEmpty()) args[0] else additionalInput)
-            ?: return ExecutionResult(true, "Error: empty cat call")
-        val fileText = environment.resolveFile(filename)
-            ?: return ExecutionResult(true, "Error: problem opening $filename")
+        val fileText = (if (args.isNotEmpty()) environment.resolveFile(args[0]) else additionalInput)
+            ?: return ExecutionResult(true, "Error: invalid wc args")
         val lines = fileText.count { it == '\n' }
-        val words = fileText.count { it == ' ' }
+        val words = fileText.trim().split("\\s".toRegex()).size
         val bytes = fileText.length
         return ExecutionResult(false, "$lines $words $bytes")
     }

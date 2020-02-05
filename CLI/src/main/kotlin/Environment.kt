@@ -14,6 +14,10 @@ data class ExecutionResult(val isInterrupted: Boolean, val textResult: String = 
  * Allows to run default OperationFactory operations in itself.
  */
 class Environment {
+    companion object {
+        const val PARSING_ERROR_MESSAGE = "Error: failed to parse command sequence"
+    }
+
     private val vars: MutableMap<String, String> = mutableMapOf()
     private val parser = Parser(OperationFactory(this), this)
 
@@ -26,7 +30,7 @@ class Environment {
         var savedResult = ""
         for (command in commandsSequence) {
             if (command == null) {
-                return ExecutionResult(true, "Error: failed to parse command sequence")
+                return ExecutionResult(true, PARSING_ERROR_MESSAGE)
             }
             val executionResult =  command.run(savedResult)
             if (executionResult.isInterrupted) {
