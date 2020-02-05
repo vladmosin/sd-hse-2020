@@ -33,7 +33,7 @@ class WC(environment: Environment) : Operation(environment) {
     override fun run(additionalInput: String?): ExecutionResult {
         val fileText = (if (args.isNotEmpty()) environment.resolveFile(args[0]) else additionalInput)
             ?: return ExecutionResult(true, "Error: invalid wc args")
-        val lines = fileText.count { it == '\n' }
+        val lines = fileText.lines().size
         val words = fileText.trim().split("\\s".toRegex()).size
         val bytes = fileText.length
         return ExecutionResult(false, "$lines $words $bytes")
@@ -108,8 +108,8 @@ class RunProcess(environment: Environment) : Operation(environment) {
         val output = process.inputStream
         val error = process.errorStream
         process.waitFor()
-        val outputString = output.bufferedReader().readText()
-        val errorString = error.bufferedReader().readText()
+        val outputString = output.bufferedReader().readText().trim()
+        val errorString = error.bufferedReader().readText().trim()
 
         process.destroy()
         return if (errorString.isNotEmpty()) {
