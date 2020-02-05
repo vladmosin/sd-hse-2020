@@ -29,7 +29,7 @@ internal class ParserTest {
     @Test
     fun processInBracketsSplitBySeparatorsTest() {
         val result = parser.splitInputBySeparators("$(a a a a)")
-        assertEquals(listOf("$(a a a a)"), result)
+        assertEquals(listOf("!$", "a", "a", "a", "a"), result)
     }
 
     @Test

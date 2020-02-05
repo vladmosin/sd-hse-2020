@@ -102,13 +102,18 @@ class RunProcess(environment: Environment) : Operation(environment) {
      * Delegate all given arguments to process builder and translate process output to ExecutionResult.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        val process = ProcessBuilder(args).directory(File(".")).start()
+        val process = ProcessBuilder(args)
+                .directory(File("."))
+                .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                .redirectError(ProcessBuilder.Redirect.PIPE)
+                .start()
         val output = process.inputStream
         val error = process.errorStream
         process.waitFor()
-        val outputString = output.toString()
-        val errorString = error.toString()
+        val outputString = output.bufferedReader().readText()
+        val errorString = error.bufferedReader().readText()
 
+        process.destroy()
         return if (errorString.isNotEmpty()) {
             ExecutionResult(true, errorString)
         }
@@ -152,7 +157,7 @@ class OperationFactory(private val environment: Environment) {
             "pwd" -> Pwd(environment)
             "cat" -> Cat(environment)
             "exit" -> Exit(environment)
-            "$" -> RunProcess(environment)
+            "!$" -> RunProcess(environment)
             "=" -> Association(environment)
             else -> null
         }

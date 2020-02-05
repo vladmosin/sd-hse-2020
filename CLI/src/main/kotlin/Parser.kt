@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 /**
  * Class for storing command name and grouped argument together.
  */
-internal data class CommandWithArgs(val commandName: String, val args: MutableList<String> = mutableListOf())
+internal data class CommandWithArgs(val commandName: String, val args: List<String> = mutableListOf())
 
 /**
  * Class for console input parsing.
@@ -24,12 +24,22 @@ class Parser(private val operationFactory: OperationFactory, private val environ
     }
 
     internal fun splitInputBySeparators(input: String): List<String> {
-        val matcher: Matcher = Pattern.compile("(([^(\"')]\\S*|\".+?\"|'.+?')\\s*)").matcher(input)
+        val matcher: Matcher = Pattern.compile("(([^(\"')]\\S*|\".+?\"|'.+?')\\s*)")
+                    .matcher(replaceBracketsInRunProcess(input))
         val list = mutableListOf<String>()
         while (matcher.find()) {
             list.add(matcher.group().trim())
         }
         return list
+    }
+
+    private fun replaceBracketsInRunProcess(input: String): String {
+        val regex = "\\$\\((.*?)\\)".toRegex()
+        return regex.replace(input) {
+            val text = it.value
+            println(text)
+            "!$ " + text.drop(2).dropLast(1) + " "
+        }
     }
 
     internal fun resolveQuotesAndVariables(str: String): String {
@@ -44,19 +54,27 @@ class Parser(private val operationFactory: OperationFactory, private val environ
     internal fun separateByPipes(args: List<String>) : List<CommandWithArgs> {
         val commandsList = mutableListOf<CommandWithArgs>()
         var isNewCommandStarted = true
-
+        val groupsList = mutableListOf<MutableList<String>>()
         for (element in args) {
             when {
                 isNewCommandStarted -> {
-                    commandsList.add(CommandWithArgs(element))
+                    groupsList.add(mutableListOf(element))
                     isNewCommandStarted = false
                 }
                 element == "|" -> {
                     isNewCommandStarted = true
                 }
                 else -> {
-                    commandsList.last().args.add(element)
+                    groupsList.last().add(element)
                 }
+            }
+        }
+
+        for (group in groupsList) {
+            if (group.size >= 2 && group[1] == "=") {
+                commandsList.add(CommandWithArgs("=", listOf(group[0], group[2])))
+            } else if (group.isNotEmpty()) {
+                commandsList.add(CommandWithArgs(group[0], group.drop(1)))
             }
         }
 
