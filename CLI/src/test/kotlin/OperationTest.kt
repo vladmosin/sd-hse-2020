@@ -1,9 +1,11 @@
 package com.sd.hw
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.assertThrows
 import java.io.File
+import java.io.IOException
 
 internal class OperationTest {
     private val environment = Environment()
@@ -205,6 +207,6 @@ internal class OperationTest {
     @Test
     fun runProcessUnknownCommandTest() {
         val runProcess = RunProcess(environment)
-        runProcess.withArgs(listOf("icho", "1")).run()
+        assertThrows<IOException> { runProcess.withArgs(listOf("icho", "1")).run() }
     }
 }
