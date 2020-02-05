@@ -37,7 +37,6 @@ class Parser(private val operationFactory: OperationFactory, private val environ
         val regex = "\\$\\((.*?)\\)".toRegex()
         return regex.replace(input) {
             val text = it.value
-            println(text)
             "!$ " + text.drop(2).dropLast(1) + " "
         }
     }
@@ -77,11 +76,6 @@ class Parser(private val operationFactory: OperationFactory, private val environ
                 commandsList.add(CommandWithArgs(group[0], group.drop(1)))
             }
         }
-
-        commandsList.forEach {
-            println(it.commandName + " with args " + it.args.joinToString(" "))
-        }
-
         return commandsList
     }
 
