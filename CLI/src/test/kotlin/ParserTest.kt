@@ -1,4 +1,5 @@
-import com.sd.hw.*
+package com.sd.hw
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
