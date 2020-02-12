@@ -66,6 +66,7 @@ internal class EnvironmentTest {
 
     @Test
     fun nonexistentFileResolveFileTest() {
+        File("kek").delete()
         assertNull(environment.resolveFile("kek"))
     }
 }
