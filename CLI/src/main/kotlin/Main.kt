@@ -3,7 +3,7 @@
 package com.sd.hw
 
 fun main() {
-    var isRunning = true 
+    var isRunning = true
     val environment = Environment()
     while (isRunning) {
         val input = readLine() ?: return
