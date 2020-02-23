@@ -1,21 +1,30 @@
 package com.sd.hw
 
+import com.sd.hw.Environment.Companion.CURRENT_DIRECTORY
+import com.sd.hw.Environment.Companion.HOME_DIRECTORY
+import com.sun.org.apache.xpath.internal.operations.Bool
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertThrows
 import java.io.File
 import java.io.IOException
 
 internal class OperationTest {
-    private val environment = Environment()
+    private var environment = Environment()
+
+    @BeforeEach
+    fun resetEnvironment() {
+        environment = Environment()
+    }
 
     @Test
     fun pwdSimpleTest() {
         val pwd = Pwd(environment)
         val result = pwd.run()
         assertEquals(false, result.isInterrupted)
-        assertEquals(File(".").absolutePath, result.textResult)
+        assertTrue(pathsEqual(environment.resolveVariable(CURRENT_DIRECTORY), result.textResult))
     }
 
     @Test
@@ -23,7 +32,7 @@ internal class OperationTest {
         val pwd = Pwd(environment)
         val result = pwd.withArgs(listOf("aaa", "bbb", "a")).run()
         assertEquals(false, result.isInterrupted)
-        assertEquals(File(".").absolutePath, result.textResult)
+        assertTrue(pathsEqual(environment.resolveVariable(CURRENT_DIRECTORY), result.textResult))
     }
 
     @Test
@@ -31,7 +40,7 @@ internal class OperationTest {
         val pwd = Pwd(environment)
         val result = pwd.run("kek")
         assertEquals(false, result.isInterrupted)
-        assertEquals(File(".").absolutePath, result.textResult)
+        assertTrue(pathsEqual(environment.resolveVariable(CURRENT_DIRECTORY), result.textResult))
     }
 
     @Test
@@ -208,5 +217,116 @@ internal class OperationTest {
     fun runProcessUnknownCommandTest() {
         val runProcess = RunProcess(environment)
         assertThrows<IOException> { runProcess.withArgs(listOf("icho", "1")).run() }
+    }
+
+    @Test
+    fun runCd() {
+        val cd = Cd(environment)
+        val pwd = Pwd(environment)
+        cd.withArgs(listOf("src")).run()
+        val result = pwd.withArgs(listOf()).run()
+        assertEquals(true, result.textResult.contains("${File.separator}src"))
+    }
+
+    @Test
+    fun runCdWithPoints() {
+        val cd = Cd(environment)
+        val pwd = Pwd(environment)
+
+        val dir1 = pwd.withArgs(listOf()).run().textResult
+        cd.withArgs(listOf("src")).run()
+        cd.withArgs(listOf("..")).run()
+        val dir2 = pwd.withArgs(listOf()).run().textResult
+
+        assertTrue(pathsEqual(dir1, dir2))
+    }
+
+    @Test
+    fun runCdWithoutArg() {
+        val cd = Cd(environment)
+        val pwd = Pwd(environment)
+        cd.withArgs(listOf()).run()
+        val result = pwd.withArgs(listOf()).run()
+        assertTrue(pathsEqual(environment.resolveVariable(HOME_DIRECTORY), result.textResult))
+    }
+
+    @Test
+    fun checkCdIgnoreExtraArg() {
+        val cd = Cd(environment)
+        val pwd = Pwd(environment)
+        cd.withArgs(listOf("src")).run()
+        val dir1 = pwd.withArgs(listOf()).run().textResult
+
+        cd.withArgs(listOf("main")).run()
+        cd.withArgs(listOf("..", "kotlin")).run()
+        val dir2 = pwd.withArgs(listOf()).run().textResult
+
+        assertTrue(pathsEqual(dir1, dir2))
+    }
+
+    @Test
+    fun runLsWithArg() {
+        val ls = Ls(environment)
+        val result = ls.withArgs(listOf("src")).run().textResult
+
+        assertTrue(result.contains("main"))
+        assertTrue(result.contains("test"))
+    }
+
+    @Test
+    fun runLsWithoutArg() {
+        val ls = Ls(environment)
+        val result = ls.withArgs(listOf()).run().textResult
+
+        assertTrue(result.contains("src"))
+        assertTrue(result.contains("build.gradle"))
+    }
+
+    @Test
+    fun checkLsIgnoreExtraArg() {
+        val ls = Ls(environment)
+        val result = ls.withArgs(listOf("src", "gradle")).run().textResult
+
+        assertTrue(result.contains("main"))
+        assertTrue(result.contains("test"))
+    }
+
+    @Test
+    fun runCdWithCat() {
+        val cat = Cat(environment)
+        val cd = Cd(environment)
+
+        val result1 = cat.withArgs(listOf("src/main/kotlin/Main.kt")).run().textResult
+        cd.withArgs(listOf("src/main/kotlin")).run()
+        val result2 = cat.withArgs(listOf("Main.kt")).run().textResult
+
+        assertEquals(result1, result2)
+    }
+
+    @Test
+    fun runCdWithLs() {
+        val ls = Ls(environment)
+        val cd = Cd(environment)
+
+        val result1 = ls.withArgs(listOf("src/main/kotlin")).run().textResult
+        cd.withArgs(listOf("src/main/kotlin")).run()
+        val result2 = ls.withArgs(listOf()).run().textResult
+
+        assertEquals(result1, result2)
+    }
+
+    private fun pathsEqual(path1: String, path2: String): Boolean {
+        var path1Start = 0
+        var path2Start = 0
+
+        if (path1[0] == File.separatorChar) {
+            path1Start = 1
+        }
+
+        if (path2[0] == File.separatorChar) {
+            path2Start = 1
+        }
+
+        return path1.substring(path1Start) == path2.substring(path2Start)
     }
 }

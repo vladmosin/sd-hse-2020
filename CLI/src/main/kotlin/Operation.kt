@@ -15,7 +15,7 @@ abstract class Operation(val environment: Environment) {
      * Add execution arguments.
      */
     open fun withArgs(values: List<String>): Operation {
-        args.addAll(values)
+        args = values.toMutableList()
         return this
     }
 
@@ -62,7 +62,7 @@ class Pwd(environment: Environment) : Operation(environment) {
      * Returns absolute path for . directory.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        return ExecutionResult(false, environment.getFullFilePath("."))
+        return ExecutionResult(false, environment.resolveVariable(CURRENT_DIRECTORY))
     }
 }
 
@@ -76,7 +76,9 @@ class Cat(environment: Environment) : Operation(environment) {
     override fun run(additionalInput: String?): ExecutionResult {
         var text = if (args.isNotEmpty()) args[0] else additionalInput
         text ?: return ExecutionResult(true)
-        text = environment.resolveVariable(CURRENT_DIRECTORY) + "/" + text
+        text = pathToStandard(environment.resolveVariable(CURRENT_DIRECTORY) + File.separator + text)
+
+        text ?: return ExecutionResult(true, "No file found")
 
         val result = environment.resolveFile(text)
             ?: return ExecutionResult(true, "No file named $text found")
@@ -111,6 +113,8 @@ class Cd(environment: Environment) : Operation(environment) {
             return ExecutionResult(false)
         }
         val nextDirectory = resolveNextDirectory(currentDirectory, args[0])
+        nextDirectory ?: return ExecutionResult(true, "Illegal operation")
+
         environment.addVariable(CURRENT_DIRECTORY, nextDirectory)
         return ExecutionResult(false)
     }
@@ -126,7 +130,10 @@ class Ls(environment: Environment) : Operation(environment) {
     override fun run(additionalInput: String?): ExecutionResult {
         var currentDirectory = environment.resolveVariable(CURRENT_DIRECTORY)
         if (args.size != 0) {
-            currentDirectory = resolveNextDirectory(currentDirectory, args[0])
+            val possiblePath = resolveNextDirectory(currentDirectory, args[0])
+            possiblePath ?: return ExecutionResult(true, "Illegal operation")
+
+            currentDirectory = possiblePath
         }
         var result = ""
         val files = File(currentDirectory).list()
@@ -215,10 +222,40 @@ class OperationFactory(private val environment: Environment) {
     }
 }
 
-fun resolveNextDirectory(currentDirectory: String, cdArg: String): String {
-    return if (cdArg[0] == '/') {
+fun resolveNextDirectory(currentDirectory: String, cdArg: String): String? {
+    return if (cdArg[0] == File.separatorChar) {
         cdArg
     } else {
-        "$currentDirectory/$cdArg"
+        pathToStandard("$currentDirectory${File.separator}$cdArg")
+    }
+}
+
+fun pathToStandard(path: String): String? {
+    val pathParts = ArrayList<String>()
+    var errorOccurs = false
+
+    path.split(File.separator).forEach { part ->
+        if (part == "..") {
+            if (pathParts.size == 0) {
+                errorOccurs = true
+            } else {
+                pathParts.removeAt(pathParts.size - 1)
+            }
+        } else {
+            pathParts.add(part)
+        }
+    }
+    var result = ""
+    return if (errorOccurs) {
+        null
+    } else {
+        pathParts.forEach { part ->
+            result += if (part == "") {
+                part
+            } else {
+                "${File.separator}$part"
+            }
+        }
+        result
     }
 }
