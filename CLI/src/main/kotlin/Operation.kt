@@ -1,5 +1,7 @@
 package com.sd.hw
 
+import com.sd.hw.Environment.Companion.CURRENT_DIRECTORY
+import com.sd.hw.Environment.Companion.HOME_DIRECTORY
 import java.io.File
 
 /**
@@ -72,8 +74,10 @@ class Cat(environment: Environment) : Operation(environment) {
      * Returns text of file given in the arguments or additional input.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        val text = if (args.isNotEmpty()) args[0] else additionalInput
+        var text = if (args.isNotEmpty()) args[0] else additionalInput
         text ?: return ExecutionResult(true)
+        text = environment.resolveVariable(CURRENT_DIRECTORY) + "/" + text
+
         val result = environment.resolveFile(text)
             ?: return ExecutionResult(true, "No file named $text found")
         return ExecutionResult(false, result)
@@ -89,6 +93,53 @@ class Exit(environment: Environment) : Operation(environment) {
      */
     override fun run(additionalInput: String?): ExecutionResult {
         return ExecutionResult(true)
+    }
+}
+
+/**
+ * Class for ls bash command partial simulation.
+ * */
+class Cd(environment: Environment) : Operation(environment) {
+    /**
+     * Returns list of files and directories
+     */
+    override fun run(additionalInput: String?): ExecutionResult {
+        val currentDirectory = environment.resolveVariable(CURRENT_DIRECTORY)
+
+        if (args.size == 0) {
+            environment.addVariable(CURRENT_DIRECTORY, environment.resolveVariable(HOME_DIRECTORY))
+            return ExecutionResult(false)
+        }
+        val nextDirectory = resolveNextDirectory(currentDirectory, args[0])
+        environment.addVariable(CURRENT_DIRECTORY, nextDirectory)
+        return ExecutionResult(false)
+    }
+}
+
+/**
+ * Class for ls bash command partial simulation.
+ * */
+class Ls(environment: Environment) : Operation(environment) {
+    /**
+     * Returns list of files and directories
+     */
+    override fun run(additionalInput: String?): ExecutionResult {
+        var currentDirectory = environment.resolveVariable(CURRENT_DIRECTORY)
+        if (args.size != 0) {
+            currentDirectory = resolveNextDirectory(currentDirectory, args[0])
+        }
+        var result = ""
+        val files = File(currentDirectory).list()
+        files ?: return ExecutionResult(true, "Error with getting list of files")
+        files.forEach { filename ->
+            result += if (result == "") {
+                filename
+            } else {
+                "\n" + filename
+            }
+        }
+
+        return ExecutionResult(false, result)
     }
 }
 
@@ -155,9 +206,19 @@ class OperationFactory(private val environment: Environment) {
             "pwd" -> Pwd(environment)
             "cat" -> Cat(environment)
             "exit" -> Exit(environment)
+            "ls" -> Ls(environment)
+            "cd" -> Cd(environment)
             "!$" -> RunProcess(environment)
             "=" -> Association(environment)
             else -> null
         }
+    }
+}
+
+fun resolveNextDirectory(currentDirectory: String, cdArg: String): String {
+    return if (cdArg[0] == '/') {
+        cdArg
+    } else {
+        "$currentDirectory/$cdArg"
     }
 }

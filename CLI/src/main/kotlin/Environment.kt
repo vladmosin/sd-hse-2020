@@ -16,10 +16,17 @@ data class ExecutionResult(val isInterrupted: Boolean, val textResult: String = 
 class Environment {
     companion object {
         const val PARSING_ERROR_MESSAGE = "Error: failed to parse command sequence"
+        const val HOME_DIRECTORY = "HOME_DIRECTORY"
+        const val CURRENT_DIRECTORY = "CURRENT_DIRECTORY";
     }
 
     private val vars: MutableMap<String, String> = mutableMapOf()
     private val parser = Parser(OperationFactory(this), this)
+
+    init {
+        addVariable(HOME_DIRECTORY, System.getProperty("user.home"))
+        addVariable(CURRENT_DIRECTORY, System.getProperty("user.dir"))
+    }
 
     /**
      * Execute pipeline of bash commands.
