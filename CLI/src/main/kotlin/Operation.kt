@@ -99,7 +99,7 @@ class Exit(environment: Environment) : Operation(environment) {
 }
 
 /**
- * Class for ls bash command partial simulation.
+ * Class for cd bash command partial simulation.
  * */
 class Cd(environment: Environment) : Operation(environment) {
     /**
@@ -142,7 +142,7 @@ class Ls(environment: Environment) : Operation(environment) {
         }
 
         if (args.size > 1) {
-            return ExecutionResult(ExecutionState.ERRORED, "Too many args(${args.size}) for cd function")
+            return ExecutionResult(ExecutionState.ERRORED, "Too many args(${args.size}) for ls function")
         }
 
         var result = ""
