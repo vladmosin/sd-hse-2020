@@ -12,6 +12,10 @@ repositories {
     mavenCentral()
 }
 
+mainClassName = "com.sd.hw.Main"
+run { standardInput = System.in }
+
+
 task runMain(type: JavaExec) {
     main = 'com.sd.hw.Main'
     classpath = sourceSets.main.runtimeClasspath

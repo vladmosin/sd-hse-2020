@@ -2,7 +2,6 @@ package com.sd.hw
 
 import com.sd.hw.Environment.Companion.CURRENT_DIRECTORY
 import com.sd.hw.Environment.Companion.HOME_DIRECTORY
-import com.sun.org.apache.xpath.internal.operations.Bool
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

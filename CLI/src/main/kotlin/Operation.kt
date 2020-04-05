@@ -112,6 +112,11 @@ class Cd(environment: Environment) : Operation(environment) {
             environment.addVariable(CURRENT_DIRECTORY, environment.resolveVariable(HOME_DIRECTORY))
             return ExecutionResult(false)
         }
+
+        if (args.size > 1) {
+            return ExecutionResult(true, "Too many args(${args.size}) for cd function")
+        }
+
         val nextDirectory = resolveNextDirectory(currentDirectory, args[0])
         nextDirectory ?: return ExecutionResult(true, "Illegal operation")
 
@@ -135,6 +140,11 @@ class Ls(environment: Environment) : Operation(environment) {
 
             currentDirectory = possiblePath
         }
+
+        if (args.size > 1) {
+            return ExecutionResult(true, "Too many args(${args.size}) for cd function")
+        }
+
         var result = ""
         val files = File(currentDirectory).list()
         files ?: return ExecutionResult(true, "Error with getting list of files")
@@ -159,7 +169,7 @@ class RunProcess(environment: Environment) : Operation(environment) {
      */
     override fun run(additionalInput: String?): ExecutionResult {
         val process = ProcessBuilder(args)
-                .directory(File("."))
+                .directory(File(environment.resolveVariable(CURRENT_DIRECTORY)))
                 .redirectOutput(ProcessBuilder.Redirect.PIPE)
                 .redirectError(ProcessBuilder.Redirect.PIPE)
                 .start()
