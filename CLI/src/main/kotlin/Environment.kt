@@ -7,7 +7,7 @@ import java.io.File
  * @param isInterrupted does command execution should be stopped after current
  * @param textResult text output of the command
  */
-data class ExecutionResult(val isInterrupted: Boolean, val textResult: String = "")
+data class ExecutionResult(val isInterrupted: ExecutionState, val textResult: String = "")
 
 /**
  * Class for environment simulation. Manage variables and files.
@@ -37,15 +37,15 @@ class Environment {
         var savedResult = ""
         for (command in commandsSequence) {
             if (command == null) {
-                return ExecutionResult(true, PARSING_ERROR_MESSAGE)
+                return ExecutionResult(ExecutionState.ERRORED, PARSING_ERROR_MESSAGE)
             }
             val executionResult =  command.run(savedResult)
-            if (executionResult.isInterrupted) {
+            if (executionResult.isInterrupted != ExecutionState.WORKING) {
                 return executionResult
             }
             savedResult = executionResult.textResult
         }
-        return ExecutionResult(false, savedResult)
+        return ExecutionResult(ExecutionState.WORKING, savedResult)
     }
 
     /**

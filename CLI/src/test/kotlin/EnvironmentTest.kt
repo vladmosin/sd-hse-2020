@@ -29,28 +29,28 @@ internal class EnvironmentTest {
     @Test
     fun oneCommandExecuteTest() {
         val result = environment.execute("echo 1")
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("1\n", result.textResult)
     }
 
     @Test
     fun unknownCommandExecuteTest() {
         val result = environment.execute("eke a a a a")
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.ERRORED, result.isInterrupted)
         assertEquals(Environment.PARSING_ERROR_MESSAGE, result.textResult)
     }
 
     @Test
     fun exitCommandExecuteTest() {
         val result = environment.execute("exit")
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.FINISHED, result.isInterrupted)
         assertEquals("", result.textResult)
     }
 
     @Test
     fun commandSequenceExecuteTest() {
         val result = environment.execute("echo a a a a | wc")
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("2 4 8", result.textResult)
     }
 

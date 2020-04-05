@@ -3,19 +3,19 @@
 package com.sd.hw
 
 fun main() {
-    var isRunning = true
+    var isWorking = ExecutionState.WORKING
     val environment = Environment()
-    try {
-        while (isRunning) {
+    while (isWorking != ExecutionState.FINISHED) {
+        try {
             val input = readLine() ?: return
             val result = environment.execute(input)
             if (result.textResult.isNotEmpty()) {
                 println(result.textResult)
             }
-            isRunning = !result.isInterrupted
+            isWorking = result.isInterrupted
+        } catch (e: Exception) {
+            print("Something went wrong")
         }
-    } catch (e: Exception) {
-        print("Something went wrong")
     }
 }
 

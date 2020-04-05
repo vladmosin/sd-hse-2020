@@ -34,11 +34,11 @@ class WC(environment: Environment) : Operation(environment) {
      */
     override fun run(additionalInput: String?): ExecutionResult {
         val fileText = (if (args.isNotEmpty()) environment.resolveFile(args[0]) else additionalInput)
-            ?: return ExecutionResult(true, "Error: invalid wc args")
+            ?: return ExecutionResult(ExecutionState.ERRORED, "Error: invalid wc args")
         val lines = fileText.lines().size
         val words = fileText.trim().split("\\s".toRegex()).size
         val bytes = fileText.length
-        return ExecutionResult(false, "$lines $words $bytes")
+        return ExecutionResult(ExecutionState.WORKING, "$lines $words $bytes")
     }
 }
 
@@ -50,7 +50,7 @@ class Echo(environment: Environment) : Operation(environment) {
      * Returns given arguments with spaces and new line in the end.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        return ExecutionResult(false, args.joinToString(" ") + '\n')
+        return ExecutionResult(ExecutionState.WORKING, args.joinToString(" ") + '\n')
     }
 }
 
@@ -62,7 +62,7 @@ class Pwd(environment: Environment) : Operation(environment) {
      * Returns absolute path for . directory.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        return ExecutionResult(false, environment.resolveVariable(CURRENT_DIRECTORY))
+        return ExecutionResult(ExecutionState.WORKING, environment.resolveVariable(CURRENT_DIRECTORY))
     }
 }
 
@@ -75,14 +75,14 @@ class Cat(environment: Environment) : Operation(environment) {
      */
     override fun run(additionalInput: String?): ExecutionResult {
         var text = if (args.isNotEmpty()) args[0] else additionalInput
-        text ?: return ExecutionResult(true)
+        text ?: return ExecutionResult(ExecutionState.ERRORED)
         text = pathToStandard(environment.resolveVariable(CURRENT_DIRECTORY) + File.separator + text)
 
-        text ?: return ExecutionResult(true, "No file found")
+        text ?: return ExecutionResult(ExecutionState.ERRORED, "No file found")
 
         val result = environment.resolveFile(text)
-            ?: return ExecutionResult(true, "No file named $text found")
-        return ExecutionResult(false, result)
+            ?: return ExecutionResult(ExecutionState.ERRORED, "No file named $text found")
+        return ExecutionResult(ExecutionState.WORKING, result)
     }
 }
 
@@ -94,7 +94,7 @@ class Exit(environment: Environment) : Operation(environment) {
      * Returns interrupting ExecutionResult.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        return ExecutionResult(true)
+        return ExecutionResult(ExecutionState.FINISHED)
     }
 }
 
@@ -110,18 +110,18 @@ class Cd(environment: Environment) : Operation(environment) {
 
         if (args.size == 0) {
             environment.addVariable(CURRENT_DIRECTORY, environment.resolveVariable(HOME_DIRECTORY))
-            return ExecutionResult(false)
+            return ExecutionResult(ExecutionState.WORKING)
         }
 
         if (args.size > 1) {
-            return ExecutionResult(true, "Too many args(${args.size}) for cd function")
+            return ExecutionResult(ExecutionState.ERRORED, "Too many args(${args.size}) for cd function")
         }
 
         val nextDirectory = resolveNextDirectory(currentDirectory, args[0])
-        nextDirectory ?: return ExecutionResult(true, "Illegal operation")
+        nextDirectory ?: return ExecutionResult(ExecutionState.ERRORED, "Directory ${args[0]} not found")
 
         environment.addVariable(CURRENT_DIRECTORY, nextDirectory)
-        return ExecutionResult(false)
+        return ExecutionResult(ExecutionState.WORKING)
     }
 }
 
@@ -136,18 +136,18 @@ class Ls(environment: Environment) : Operation(environment) {
         var currentDirectory = environment.resolveVariable(CURRENT_DIRECTORY)
         if (args.size != 0) {
             val possiblePath = resolveNextDirectory(currentDirectory, args[0])
-            possiblePath ?: return ExecutionResult(true, "Illegal operation")
+            possiblePath ?: return ExecutionResult(ExecutionState.ERRORED, "Illegal operation")
 
             currentDirectory = possiblePath
         }
 
         if (args.size > 1) {
-            return ExecutionResult(true, "Too many args(${args.size}) for cd function")
+            return ExecutionResult(ExecutionState.ERRORED, "Too many args(${args.size}) for cd function")
         }
 
         var result = ""
         val files = File(currentDirectory).list()
-        files ?: return ExecutionResult(true, "Error with getting list of files")
+        files ?: return ExecutionResult(ExecutionState.ERRORED, "Error with getting list of files")
         files.forEach { filename ->
             result += if (result == "") {
                 filename
@@ -156,7 +156,7 @@ class Ls(environment: Environment) : Operation(environment) {
             }
         }
 
-        return ExecutionResult(false, result)
+        return ExecutionResult(ExecutionState.WORKING, result)
     }
 }
 
@@ -181,10 +181,10 @@ class RunProcess(environment: Environment) : Operation(environment) {
 
         process.destroy()
         return if (errorString.isNotEmpty()) {
-            ExecutionResult(true, errorString)
+            ExecutionResult(ExecutionState.ERRORED, errorString)
         }
         else {
-            ExecutionResult(false, outputString)
+            ExecutionResult(ExecutionState.WORKING, outputString)
         }
     }
 }
@@ -198,12 +198,12 @@ class Association(environment: Environment) : Operation(environment) {
      */
     override fun run(additionalInput: String?): ExecutionResult {
         if (args.size != 2) {
-            return ExecutionResult(true)
+            return ExecutionResult(ExecutionState.ERRORED)
         }
         val variableName = args[0]
         val variableValue = args[1]
         environment.addVariable(variableName, variableValue)
-        return ExecutionResult(false)
+        return ExecutionResult(ExecutionState.WORKING)
     }
 
 }
@@ -236,7 +236,12 @@ fun resolveNextDirectory(currentDirectory: String, cdArg: String): String? {
     return if (cdArg[0] == File.separatorChar) {
         cdArg
     } else {
-        pathToStandard("$currentDirectory${File.separator}$cdArg")
+        val path = pathToStandard("$currentDirectory${File.separator}$cdArg") ?: return null
+        if (File(path).exists()) {
+            path
+        } else {
+            null
+        }
     }
 }
 

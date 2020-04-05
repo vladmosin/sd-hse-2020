@@ -22,7 +22,7 @@ internal class OperationTest {
     fun pwdSimpleTest() {
         val pwd = Pwd(environment)
         val result = pwd.run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertTrue(pathsEqual(environment.resolveVariable(CURRENT_DIRECTORY), result.textResult))
     }
 
@@ -30,7 +30,7 @@ internal class OperationTest {
     fun pwdArgumentsIgnoreTest() {
         val pwd = Pwd(environment)
         val result = pwd.withArgs(listOf("aaa", "bbb", "a")).run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertTrue(pathsEqual(environment.resolveVariable(CURRENT_DIRECTORY), result.textResult))
     }
 
@@ -38,7 +38,7 @@ internal class OperationTest {
     fun pwdAdditionalInputIgnoreTest() {
         val pwd = Pwd(environment)
         val result = pwd.run("kek")
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertTrue(pathsEqual(environment.resolveVariable(CURRENT_DIRECTORY), result.textResult))
     }
 
@@ -46,7 +46,7 @@ internal class OperationTest {
     fun echoSimpleTest() {
         val echo = Echo(environment)
         val result = echo.run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("\n", result.textResult)
     }
 
@@ -54,7 +54,7 @@ internal class OperationTest {
     fun echoSeveralArgsTest() {
         val echo = Echo(environment)
         val result = echo.withArgs(listOf("a", "a a", "c", "d   d")).run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("a a a c d   d\n", result.textResult)
     }
 
@@ -62,7 +62,7 @@ internal class OperationTest {
     fun echoAdditionalInputIgnoreTest() {
         val echo = Echo(environment)
         val result = echo.withArgs(listOf("a")).run("ddddddddddddddddd")
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("a\n", result.textResult)
     }
 
@@ -70,7 +70,7 @@ internal class OperationTest {
     fun wcSimpleTest() {
         val wc = WC(environment)
         val result = wc.run()
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.ERRORED, result.isInterrupted)
     }
 
     @Test
@@ -80,7 +80,7 @@ internal class OperationTest {
         file.createNewFile()
         file.writeText("a a")
         val result = wc.withArgs(listOf("kek")).run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("1 2 3", result.textResult)
     }
 
@@ -88,7 +88,7 @@ internal class OperationTest {
     fun wcNonexistentFileTest() {
         val wc = WC(environment)
         val result = wc.withArgs(listOf("asf")).run()
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.ERRORED, result.isInterrupted)
     }
 
     @Test
@@ -99,7 +99,7 @@ internal class OperationTest {
         file.writeText("a a")
         file.deleteOnExit()
         val result = wc.withArgs(listOf("kek", "a", "b", "c")).run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("1 2 3", result.textResult)
     }
 
@@ -107,7 +107,7 @@ internal class OperationTest {
     fun wcWithAdditionalInputTest() {
         val wc = WC(environment)
         val result = wc.run("a a")
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("1 2 3", result.textResult)
     }
 
@@ -120,7 +120,7 @@ internal class OperationTest {
         file.deleteOnExit()
 
         val result = cat.withArgs(listOf("kek")).run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("a\na\na a a b \nc", result.textResult)
     }
 
@@ -129,7 +129,7 @@ internal class OperationTest {
         val cat = Cat(environment)
 
         val result = cat.withArgs(listOf("kek12")).run()
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.ERRORED, result.isInterrupted)
     }
 
     @Test
@@ -141,7 +141,7 @@ internal class OperationTest {
         file.deleteOnExit()
 
         val result = cat.run("kek")
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("a\na\na a a b \nc", result.textResult)
     }
 
@@ -149,7 +149,7 @@ internal class OperationTest {
     fun exitSimpleTest() {
         val exit = Exit(environment)
         val result = exit.run()
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.FINISHED, result.isInterrupted)
         assertEquals("", result.textResult)
     }
 
@@ -157,7 +157,7 @@ internal class OperationTest {
     fun exitArgsIgnoreTest() {
         val exit = Exit(environment)
         val result = exit.withArgs(listOf("a", "b", "c")).run()
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.FINISHED, result.isInterrupted)
         assertEquals("", result.textResult)
     }
 
@@ -165,7 +165,7 @@ internal class OperationTest {
     fun exitAdditionalInputIgnoreTest() {
         val exit = Exit(environment)
         val result = exit.run("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.FINISHED, result.isInterrupted)
         assertEquals("", result.textResult)
     }
 
@@ -173,7 +173,7 @@ internal class OperationTest {
     fun simpleAssociationTest() {
         val association = Association(environment)
         val result = association.withArgs(listOf("a", "10")).run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("", result.textResult)
         assertEquals("10", environment.resolveVariable("a"))
     }
@@ -182,7 +182,7 @@ internal class OperationTest {
     fun updateValueAssociationTest() {
         Association(environment).withArgs(listOf("a", "10")).run()
         val result = Association(environment).withArgs(listOf("a", "40 40")).run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("", result.textResult)
         assertEquals("40 40", environment.resolveVariable("a"))
     }
@@ -191,7 +191,7 @@ internal class OperationTest {
     fun ignoreAdditionalInputAssociationTest() {
         val association = Association(environment)
         val result = association.withArgs(listOf("a", "10")).run("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaa")
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("", result.textResult)
         assertEquals("10", environment.resolveVariable("a"))
     }
@@ -200,7 +200,7 @@ internal class OperationTest {
     fun runProcessSimpleTest() {
         val runProcess = RunProcess(environment)
         val result = runProcess.withArgs(listOf("echo", "1")).run()
-        assertEquals(false, result.isInterrupted)
+        assertEquals(ExecutionState.WORKING, result.isInterrupted)
         assertEquals("1", result.textResult)
     }
 
@@ -208,7 +208,7 @@ internal class OperationTest {
     fun runProcessStderrTest() {
         val runProcess = RunProcess(environment)
         val result = runProcess.withArgs(listOf("cat", "1")).run()
-        assertEquals(true, result.isInterrupted)
+        assertEquals(ExecutionState.ERRORED, result.isInterrupted)
         assertTrue(result.textResult.contains("No such file or directory"))
     }
 
@@ -250,20 +250,6 @@ internal class OperationTest {
     }
 
     @Test
-    fun checkCdIgnoreExtraArg() {
-        val cd = Cd(environment)
-        val pwd = Pwd(environment)
-        cd.withArgs(listOf("src")).run()
-        val dir1 = pwd.withArgs(listOf()).run().textResult
-
-        cd.withArgs(listOf("main")).run()
-        cd.withArgs(listOf("..", "kotlin")).run()
-        val dir2 = pwd.withArgs(listOf()).run().textResult
-
-        assertTrue(pathsEqual(dir1, dir2))
-    }
-
-    @Test
     fun runLsWithArg() {
         val ls = Ls(environment)
         val result = ls.withArgs(listOf("src")).run().textResult
@@ -279,15 +265,6 @@ internal class OperationTest {
 
         assertTrue(result.contains("src"))
         assertTrue(result.contains("build.gradle"))
-    }
-
-    @Test
-    fun checkLsIgnoreExtraArg() {
-        val ls = Ls(environment)
-        val result = ls.withArgs(listOf("src", "gradle")).run().textResult
-
-        assertTrue(result.contains("main"))
-        assertTrue(result.contains("test"))
     }
 
     @Test
