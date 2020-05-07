@@ -291,6 +291,13 @@ internal class OperationTest {
         assertEquals(result1, result2)
     }
 
+    @Test
+    fun cdToFile() {
+        val cd = Cd(environment)
+        val result = cd.withArgs(listOf("src/main/kotlin/Main.kt")).run()
+        assertEquals(result.isInterrupted, ExecutionState.ERRORED)
+    }
+
     private fun pathsEqual(path1: String, path2: String): Boolean {
         var path1Start = 0
         var path2Start = 0

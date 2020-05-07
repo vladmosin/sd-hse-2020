@@ -120,6 +120,10 @@ class Cd(environment: Environment) : Operation(environment) {
         val nextDirectory = resolveNextDirectory(currentDirectory, args[0])
         nextDirectory ?: return ExecutionResult(ExecutionState.ERRORED, "Directory ${args[0]} not found")
 
+        if (!File(nextDirectory).isDirectory) {
+            return ExecutionResult(ExecutionState.ERRORED, "$nextDirectory is file, not a directory")
+        }
+
         environment.addVariable(CURRENT_DIRECTORY, nextDirectory)
         return ExecutionResult(ExecutionState.WORKING)
     }
