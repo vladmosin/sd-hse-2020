@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 /**
  * Class for storing command name and grouped argument together.
  */
-internal data class CommandWithArgs(val commandName: String, val args: List<String> = mutableListOf())
+data class CommandWithArgs(val commandName: String, val args: List<String> = mutableListOf())
 
 /**
  * Class for console input parsing.
@@ -23,7 +23,7 @@ class Parser(private val operationFactory: OperationFactory, private val environ
         return mapNamesToOperations(commandsWithArgs)
     }
 
-    internal fun splitInputBySeparators(input: String): List<String> {
+    fun splitInputBySeparators(input: String): List<String> {
         val matcher: Matcher = Pattern.compile("(([^(\"')]\\S*|\".+?\"|'.+?')\\s*)")
                     .matcher(replaceBracketsInRunProcess(input))
         val list = mutableListOf<String>()
@@ -41,7 +41,7 @@ class Parser(private val operationFactory: OperationFactory, private val environ
         }
     }
 
-    internal fun resolveQuotesAndVariables(str: String): String {
+    fun resolveQuotesAndVariables(str: String): String {
         return if (str.first() == '"' && str.last() == '"')
             replaceAllVariables(str.drop(1).dropLast(1))
         else if (str.first() == '\'' && str.last() == '\'')
@@ -50,7 +50,7 @@ class Parser(private val operationFactory: OperationFactory, private val environ
             replaceAllVariables(str)
     }
 
-    internal fun separateByPipes(args: List<String>) : List<CommandWithArgs> {
+    fun separateByPipes(args: List<String>) : List<CommandWithArgs> {
         val commandsList = mutableListOf<CommandWithArgs>()
         var isNewCommandStarted = true
         val groupsList = mutableListOf<MutableList<String>>()
@@ -79,7 +79,7 @@ class Parser(private val operationFactory: OperationFactory, private val environ
         return commandsList
     }
 
-    internal fun mapNamesToOperations(commandsWithArgs: List<CommandWithArgs>): List<Operation?> {
+    fun mapNamesToOperations(commandsWithArgs: List<CommandWithArgs>): List<Operation?> {
         return commandsWithArgs.map {
             val command = operationFactory.getOperationByName(it.commandName)
             command?.withArgs(it.args)

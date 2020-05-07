@@ -1,5 +1,7 @@
 package com.sd.hw
 
+import com.sd.hw.Environment.Companion.CURRENT_DIRECTORY
+import com.sd.hw.Environment.Companion.HOME_DIRECTORY
 import java.io.File
 
 /**
@@ -13,7 +15,7 @@ abstract class Operation(val environment: Environment) {
      * Add execution arguments.
      */
     open fun withArgs(values: List<String>): Operation {
-        args.addAll(values)
+        args = values.toMutableList()
         return this
     }
 
@@ -32,11 +34,11 @@ class WC(environment: Environment) : Operation(environment) {
      */
     override fun run(additionalInput: String?): ExecutionResult {
         val fileText = (if (args.isNotEmpty()) environment.resolveFile(args[0]) else additionalInput)
-            ?: return ExecutionResult(true, "Error: invalid wc args")
+            ?: return ExecutionResult(ExecutionState.ERRORED, "Error: invalid wc args")
         val lines = fileText.lines().size
         val words = fileText.trim().split("\\s".toRegex()).size
         val bytes = fileText.length
-        return ExecutionResult(false, "$lines $words $bytes")
+        return ExecutionResult(ExecutionState.WORKING, "$lines $words $bytes")
     }
 }
 
@@ -48,7 +50,7 @@ class Echo(environment: Environment) : Operation(environment) {
      * Returns given arguments with spaces and new line in the end.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        return ExecutionResult(false, args.joinToString(" ") + '\n')
+        return ExecutionResult(ExecutionState.WORKING, args.joinToString(" ") + '\n')
     }
 }
 
@@ -60,7 +62,7 @@ class Pwd(environment: Environment) : Operation(environment) {
      * Returns absolute path for . directory.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        return ExecutionResult(false, environment.getFullFilePath("."))
+        return ExecutionResult(ExecutionState.WORKING, environment.resolveVariable(CURRENT_DIRECTORY))
     }
 }
 
@@ -72,11 +74,15 @@ class Cat(environment: Environment) : Operation(environment) {
      * Returns text of file given in the arguments or additional input.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        val text = if (args.isNotEmpty()) args[0] else additionalInput
-        text ?: return ExecutionResult(true)
+        var text = if (args.isNotEmpty()) args[0] else additionalInput
+        text ?: return ExecutionResult(ExecutionState.ERRORED)
+        text = pathToStandard(environment.resolveVariable(CURRENT_DIRECTORY) + File.separator + text)
+
+        text ?: return ExecutionResult(ExecutionState.ERRORED, "No file found")
+
         val result = environment.resolveFile(text)
-            ?: return ExecutionResult(true, "No file named $text found")
-        return ExecutionResult(false, result)
+            ?: return ExecutionResult(ExecutionState.ERRORED, "No file named $text found")
+        return ExecutionResult(ExecutionState.WORKING, result)
     }
 }
 
@@ -88,7 +94,73 @@ class Exit(environment: Environment) : Operation(environment) {
      * Returns interrupting ExecutionResult.
      */
     override fun run(additionalInput: String?): ExecutionResult {
-        return ExecutionResult(true)
+        return ExecutionResult(ExecutionState.FINISHED)
+    }
+}
+
+/**
+ * Class for cd bash command partial simulation.
+ * */
+class Cd(environment: Environment) : Operation(environment) {
+    /**
+     * Returns list of files and directories
+     */
+    override fun run(additionalInput: String?): ExecutionResult {
+        val currentDirectory = environment.resolveVariable(CURRENT_DIRECTORY)
+
+        if (args.size == 0) {
+            environment.addVariable(CURRENT_DIRECTORY, environment.resolveVariable(HOME_DIRECTORY))
+            return ExecutionResult(ExecutionState.WORKING)
+        }
+
+        if (args.size > 1) {
+            return ExecutionResult(ExecutionState.ERRORED, "Too many args(${args.size}) for cd function")
+        }
+
+        val nextDirectory = resolveNextDirectory(currentDirectory, args[0])
+        nextDirectory ?: return ExecutionResult(ExecutionState.ERRORED, "Directory ${args[0]} not found")
+
+        if (!File(nextDirectory).isDirectory) {
+            return ExecutionResult(ExecutionState.ERRORED, "$nextDirectory is file, not a directory")
+        }
+
+        environment.addVariable(CURRENT_DIRECTORY, nextDirectory)
+        return ExecutionResult(ExecutionState.WORKING)
+    }
+}
+
+/**
+ * Class for ls bash command partial simulation.
+ * */
+class Ls(environment: Environment) : Operation(environment) {
+    /**
+     * Returns list of files and directories
+     */
+    override fun run(additionalInput: String?): ExecutionResult {
+        var currentDirectory = environment.resolveVariable(CURRENT_DIRECTORY)
+        if (args.size != 0) {
+            val possiblePath = resolveNextDirectory(currentDirectory, args[0])
+            possiblePath ?: return ExecutionResult(ExecutionState.ERRORED, "Illegal operation")
+
+            currentDirectory = possiblePath
+        }
+
+        if (args.size > 1) {
+            return ExecutionResult(ExecutionState.ERRORED, "Too many args(${args.size}) for ls function")
+        }
+
+        var result = ""
+        val files = File(currentDirectory).list()
+        files ?: return ExecutionResult(ExecutionState.ERRORED, "Error with getting list of files")
+        files.forEach { filename ->
+            result += if (result == "") {
+                filename
+            } else {
+                "\n" + filename
+            }
+        }
+
+        return ExecutionResult(ExecutionState.WORKING, result)
     }
 }
 
@@ -101,7 +173,7 @@ class RunProcess(environment: Environment) : Operation(environment) {
      */
     override fun run(additionalInput: String?): ExecutionResult {
         val process = ProcessBuilder(args)
-                .directory(File("."))
+                .directory(File(environment.resolveVariable(CURRENT_DIRECTORY)))
                 .redirectOutput(ProcessBuilder.Redirect.PIPE)
                 .redirectError(ProcessBuilder.Redirect.PIPE)
                 .start()
@@ -113,10 +185,10 @@ class RunProcess(environment: Environment) : Operation(environment) {
 
         process.destroy()
         return if (errorString.isNotEmpty()) {
-            ExecutionResult(true, errorString)
+            ExecutionResult(ExecutionState.ERRORED, errorString)
         }
         else {
-            ExecutionResult(false, outputString)
+            ExecutionResult(ExecutionState.WORKING, outputString)
         }
     }
 }
@@ -130,12 +202,12 @@ class Association(environment: Environment) : Operation(environment) {
      */
     override fun run(additionalInput: String?): ExecutionResult {
         if (args.size != 2) {
-            return ExecutionResult(true)
+            return ExecutionResult(ExecutionState.ERRORED)
         }
         val variableName = args[0]
         val variableValue = args[1]
         environment.addVariable(variableName, variableValue)
-        return ExecutionResult(false)
+        return ExecutionResult(ExecutionState.WORKING)
     }
 
 }
@@ -155,9 +227,54 @@ class OperationFactory(private val environment: Environment) {
             "pwd" -> Pwd(environment)
             "cat" -> Cat(environment)
             "exit" -> Exit(environment)
+            "ls" -> Ls(environment)
+            "cd" -> Cd(environment)
             "!$" -> RunProcess(environment)
             "=" -> Association(environment)
             else -> null
         }
+    }
+}
+
+fun resolveNextDirectory(currentDirectory: String, cdArg: String): String? {
+    return if (cdArg[0] == File.separatorChar) {
+        cdArg
+    } else {
+        val path = pathToStandard("$currentDirectory${File.separator}$cdArg") ?: return null
+        if (File(path).exists()) {
+            path
+        } else {
+            null
+        }
+    }
+}
+
+fun pathToStandard(path: String): String? {
+    val pathParts = ArrayList<String>()
+    var errorOccurs = false
+
+    path.split(File.separator).forEach { part ->
+        if (part == "..") {
+            if (pathParts.size == 0) {
+                errorOccurs = true
+            } else {
+                pathParts.removeAt(pathParts.size - 1)
+            }
+        } else {
+            pathParts.add(part)
+        }
+    }
+    var result = ""
+    return if (errorOccurs) {
+        null
+    } else {
+        pathParts.forEach { part ->
+            result += if (part == "") {
+                part
+            } else {
+                "${File.separator}$part"
+            }
+        }
+        result
     }
 }

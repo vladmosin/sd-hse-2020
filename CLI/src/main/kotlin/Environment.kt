@@ -7,7 +7,7 @@ import java.io.File
  * @param isInterrupted does command execution should be stopped after current
  * @param textResult text output of the command
  */
-data class ExecutionResult(val isInterrupted: Boolean, val textResult: String = "")
+data class ExecutionResult(val isInterrupted: ExecutionState, val textResult: String = "")
 
 /**
  * Class for environment simulation. Manage variables and files.
@@ -16,10 +16,17 @@ data class ExecutionResult(val isInterrupted: Boolean, val textResult: String = 
 class Environment {
     companion object {
         const val PARSING_ERROR_MESSAGE = "Error: failed to parse command sequence"
+        const val HOME_DIRECTORY = "HOME_DIRECTORY"
+        const val CURRENT_DIRECTORY = "CURRENT_DIRECTORY";
     }
 
     private val vars: MutableMap<String, String> = mutableMapOf()
     private val parser = Parser(OperationFactory(this), this)
+
+    init {
+        addVariable(HOME_DIRECTORY, System.getProperty("user.home"))
+        addVariable(CURRENT_DIRECTORY, System.getProperty("user.dir"))
+    }
 
     /**
      * Execute pipeline of bash commands.
@@ -30,15 +37,15 @@ class Environment {
         var savedResult = ""
         for (command in commandsSequence) {
             if (command == null) {
-                return ExecutionResult(true, PARSING_ERROR_MESSAGE)
+                return ExecutionResult(ExecutionState.ERRORED, PARSING_ERROR_MESSAGE)
             }
             val executionResult =  command.run(savedResult)
-            if (executionResult.isInterrupted) {
+            if (executionResult.isInterrupted != ExecutionState.WORKING) {
                 return executionResult
             }
             savedResult = executionResult.textResult
         }
-        return ExecutionResult(false, savedResult)
+        return ExecutionResult(ExecutionState.WORKING, savedResult)
     }
 
     /**
